@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha1"
 	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/hex"
 )
 
@@ -45,4 +46,24 @@ func HmacSha256(key string, data string) []byte {
 // HmacSha256ToString Calculate the sha256 hash of a string using the HMAC method, outputs lowercase hexits
 func HmacSha256ToString(key string, data string) string {
 	return hex.EncodeToString(HmacSha256(key, data))
+}
+
+// Sha512 Calculate the sha512 hash of a string
+func Sha512(str string) []byte {
+	h := sha512.New()
+	_, _ = h.Write([]byte(str))
+	return h.Sum(nil)
+}
+
+// HmacSha512 Calculate the sha512 hash of a string using the HMAC method
+func HmacSha512(key string, data string) []byte {
+	mac := hmac.New(sha512.New, []byte(key))
+	_, _ = mac.Write([]byte(data))
+
+	return mac.Sum(nil)
+}
+
+// HmacSha512ToString Calculate the sha512 hash of a string using the HMAC method, outputs lowercase hexits
+func HmacSha512ToString(key string, data string) string {
+	return hex.EncodeToString(HmacSha512(key, data))
 }
