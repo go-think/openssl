@@ -40,7 +40,7 @@ jobs:
           node-version: 'lts/*'
 
       - name: Run semantic-release
-        if: github.repository == 'forgoer/openssl' && github.event_name == 'push'
+        if: github.repository == 'go-think/openssl' && github.event_name == 'push'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
