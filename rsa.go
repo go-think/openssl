@@ -55,19 +55,50 @@ func RSAEncrypt(src, pubKey []byte) ([]byte, error) {
 	}
 
 	// x509 parse
-	publicKeyInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return nil, err
+	var publicKeyInterface interface{}
+	var err error
+
+	if block.Type == "CERTIFICATE" {
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, err
+		}
+		publicKeyInterface = cert.PublicKey
+	} else {
+		publicKeyInterface, err = x509.ParsePKIXPublicKey(block.Bytes)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	publicKey, ok := publicKeyInterface.(*rsa.PublicKey)
 	if !ok {
 		return nil, errors.New("the kind of key is not a rsa.PublicKey")
 	}
-	// encrypt
-	dst, err := rsa.EncryptPKCS1v15(rand.Reader, publicKey, src)
-	if err != nil {
-		return nil, err
+
+	keySize := publicKey.Size()
+	maxBlockSize := keySize - 11
+	if maxBlockSize <= 0 {
+		return nil, errors.New("rsa public key is too small")
+	}
+
+	var dst []byte
+
+	if len(src) == 0 {
+		return rsa.EncryptPKCS1v15(rand.Reader, publicKey, src)
+	}
+
+	for len(src) > 0 {
+		blockSize := len(src)
+		if blockSize > maxBlockSize {
+			blockSize = maxBlockSize
+		}
+		encrypted, err := rsa.EncryptPKCS1v15(rand.Reader, publicKey, src[:blockSize])
+		if err != nil {
+			return nil, err
+		}
+		dst = append(dst, encrypted...)
+		src = src[blockSize:]
 	}
 
 	return dst, nil
@@ -86,9 +117,24 @@ func RSADecrypt(src, priKey []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	dst, err := rsa.DecryptPKCS1v15(rand.Reader, privateKey, src)
-	if err != nil {
-		return nil, err
+	keySize := privateKey.PublicKey.Size()
+	if keySize <= 0 {
+		return nil, errors.New("rsa private key is invalid")
+	}
+
+	var dst []byte
+
+	for len(src) > 0 {
+		blockSize := len(src)
+		if blockSize > keySize {
+			blockSize = keySize
+		}
+		decrypted, err := rsa.DecryptPKCS1v15(rand.Reader, privateKey, src[:blockSize])
+		if err != nil {
+			return nil, err
+		}
+		dst = append(dst, decrypted...)
+		src = src[blockSize:]
 	}
 
 	return dst, nil
