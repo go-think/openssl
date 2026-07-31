@@ -45,6 +45,27 @@ func AesCBCDecrypt(src, key, iv []byte, padding string) ([]byte, error) {
 	return CBCDecrypt(block, src, iv, padding)
 }
 
+// AesGCMEncrypt encrypts data using the GCM mode of the AES algorithm.
+func AesGCMEncrypt(src, key, nonce, additionalData []byte) ([]byte, error) {
+	block, err := AesNewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return GCMEncrypt(block, src, nonce, additionalData)
+}
+
+// AesGCMDecrypt decrypts data using the GCM mode of the AES algorithm.
+func AesGCMDecrypt(src, key, nonce, additionalData []byte) ([]byte, error) {
+	block, err := AesNewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return GCMDecrypt(block, src, nonce, additionalData)
+}
+
+
 // AesNewCipher creates and returns a new AES cipher block. Automatically pads the key length.
 func AesNewCipher(key []byte) (cipher.Block, error) {
 	return aes.NewCipher(aesKeyPending(key))

@@ -53,6 +53,24 @@ dst , _ = openssl.AesCBCDecrypt(dst, key, iv, openssl.PKCS7_PADDING)
 fmt.Println(string(dst)) // 123456
 ```
 
+AES-GCM (Galois/Counter Mode):
+
+GCM is an AEAD mode that provides both confidentiality and data integrity authentication. It does not require padding. If the ciphertext or additional data (AAD) is tampered with, decryption will fail and return an authentication error.
+
+```go
+src := []byte("123456")
+key := []byte("1234567890123456")
+nonce := []byte("123456789012") // standard 12-byte nonce
+additionalData := []byte("header_info") // optional AAD
+
+dst, err := openssl.AesGCMEncrypt(src, key, nonce, additionalData)
+fmt.Println(base64.StdEncoding.EncodeToString(dst))
+
+dst, err = openssl.AesGCMDecrypt(dst, key, nonce, additionalData)
+fmt.Println(string(dst)) // 123456
+```
+
+
 ### DES
 
 The length of the key must be 8 characters (64 bits).

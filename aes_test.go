@@ -118,3 +118,23 @@ func Test_aesKeyPending(t *testing.T) {
 		})
 	}
 }
+
+func TestAesGCM(t *testing.T) {
+	src := []byte("123456_GCM_DATA")
+	key := []byte("1234512345123451")
+	nonce := []byte("123456789012")
+	aad := []byte("header_data")
+
+	// Encrypt
+	ciphertext, err := AesGCMEncrypt(src, key, nonce, aad)
+	assert.NoError(t, err)
+
+	// Decrypt
+	plaintext, err := AesGCMDecrypt(ciphertext, key, nonce, aad)
+	assert.NoError(t, err)
+	assert.Equal(t, src, plaintext)
+
+	// Invalid Key error
+	_, err = AesGCMDecrypt(ciphertext, []byte("wrongkey12345678"), nonce, aad)
+	assert.Error(t, err)
+}
