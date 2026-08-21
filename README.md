@@ -23,7 +23,7 @@ A functions wrapping of OpenSSL library for symmetric and asymmetric encryption 
   - Encryption & decryption with **automatic chunking** for arbitrary large data.
   - Supports standard Public Key PEM and X.509 **Certificate** formats.
   - Digital signature and verification (`RSASign` / `RSAVerify`) with configurable hash algorithms.
-- **Hashes & HMAC**: MD5, SHA-1, SHA-256, SHA-512, HMAC-SHA1, HMAC-SHA256, HMAC-SHA512.
+- **Hashes & HMAC**: MD5, SHA-1, SHA-224, SHA-256, SHA-384, SHA-512, HMAC-SHA1, HMAC-SHA224, HMAC-SHA256, HMAC-SHA384, HMAC-SHA512.
 - **Smart Key & IV Handling**: Automatic padding / truncating for keys and IVs to eliminate boilerplate code.
 - **100% Interoperability**: Seamlessly compatible with OpenSSL, PHP (`openssl_encrypt`), Java, Python, and Node.js.
 
@@ -263,25 +263,34 @@ hexStr := openssl.Md5ToString("hello world") // 5eb63bbbe01eeed093cb22bb8f5acdc3
 
 ### SHA & HMAC-SHA
 
-Supports SHA-1, SHA-256, and SHA-512 with corresponding HMAC functions:
+Supports SHA-1, SHA-224, SHA-256, SHA-384, and SHA-512 with corresponding HMAC functions:
 
 ```go
 data := "hello world"
 key  := "secret-key"
 
-// SHA Hash
+// SHA Hash (returns []byte)
 sha1Bytes   := openssl.Sha1(data)
+sha224Bytes := openssl.Sha224(data)
 sha256Bytes := openssl.Sha256(data)
+sha384Bytes := openssl.Sha384(data)
 sha512Bytes := openssl.Sha512(data)
+
+// SHA Hash (returns hex string)
+sha256Hex   := openssl.Sha256ToString(data)
 
 // HMAC Hash (returns []byte)
 hmac1   := openssl.HmacSha1(key, data)
+hmac224 := openssl.HmacSha224(key, data)
 hmac256 := openssl.HmacSha256(key, data)
+hmac384 := openssl.HmacSha384(key, data)
 hmac512 := openssl.HmacSha512(key, data)
 
 // HMAC Hash (returns hex string)
 hmac1Str   := openssl.HmacSha1ToString(key, data)
+hmac224Str := openssl.HmacSha224ToString(key, data)
 hmac256Str := openssl.HmacSha256ToString(key, data)
+hmac384Str := openssl.HmacSha384ToString(key, data)
 hmac512Str := openssl.HmacSha512ToString(key, data)
 ```
 
