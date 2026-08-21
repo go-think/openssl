@@ -45,6 +45,66 @@ func DesCBCDecrypt(src, key, iv []byte, padding string) ([]byte, error) {
 	return CBCDecrypt(block, src, iv, padding)
 }
 
+// DesCFBEncrypt encrypts data using the CFB mode of the DES algorithm.
+func DesCFBEncrypt(src, key, iv []byte) ([]byte, error) {
+	block, err := DesNewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return CFBEncrypt(block, src, iv)
+}
+
+// DesCFBDecrypt decrypts data using the CFB mode of the DES algorithm.
+func DesCFBDecrypt(src, key, iv []byte) ([]byte, error) {
+	block, err := DesNewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return CFBDecrypt(block, src, iv)
+}
+
+// DesOFBEncrypt encrypts data using the OFB mode of the DES algorithm.
+func DesOFBEncrypt(src, key, iv []byte) ([]byte, error) {
+	block, err := DesNewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return OFBEncrypt(block, src, iv)
+}
+
+// DesOFBDecrypt decrypts data using the OFB mode of the DES algorithm.
+func DesOFBDecrypt(src, key, iv []byte) ([]byte, error) {
+	block, err := DesNewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return OFBDecrypt(block, src, iv)
+}
+
+// DesCTREncrypt encrypts data using the CTR mode of the DES algorithm.
+func DesCTREncrypt(src, key, iv []byte) ([]byte, error) {
+	block, err := DesNewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return CTREncrypt(block, src, iv)
+}
+
+// DesCTRDecrypt decrypts data using the CTR mode of the DES algorithm.
+func DesCTRDecrypt(src, key, iv []byte) ([]byte, error) {
+	block, err := DesNewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return CTRDecrypt(block, src, iv)
+}
+
 // DesNewCipher creates and returns a new DES cipher block, adjusting the key length if necessary.
 func DesNewCipher(key []byte) (cipher.Block, error) {
 	if len(key) < 8 {

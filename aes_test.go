@@ -138,3 +138,45 @@ func TestAesGCM(t *testing.T) {
 	_, err = AesGCMDecrypt(ciphertext, []byte("wrongkey12345678"), nonce, aad)
 	assert.Error(t, err)
 }
+
+func TestAesCFB(t *testing.T) {
+	src := []byte("123456_CFB_TEST_STRING")
+	key := []byte("1234512345123451")
+	iv := []byte("1234567890123456")
+
+	encrypted, err := AesCFBEncrypt(src, key, iv)
+	assert.NoError(t, err)
+	assert.Equal(t, len(src), len(encrypted))
+
+	decrypted, err := AesCFBDecrypt(encrypted, key, iv)
+	assert.NoError(t, err)
+	assert.Equal(t, src, decrypted)
+}
+
+func TestAesOFB(t *testing.T) {
+	src := []byte("123456_OFB_TEST_STRING")
+	key := []byte("1234512345123451")
+	iv := []byte("1234567890123456")
+
+	encrypted, err := AesOFBEncrypt(src, key, iv)
+	assert.NoError(t, err)
+	assert.Equal(t, len(src), len(encrypted))
+
+	decrypted, err := AesOFBDecrypt(encrypted, key, iv)
+	assert.NoError(t, err)
+	assert.Equal(t, src, decrypted)
+}
+
+func TestAesCTR(t *testing.T) {
+	src := []byte("123456_CTR_TEST_STRING")
+	key := []byte("1234512345123451")
+	iv := []byte("1234567890123456")
+
+	encrypted, err := AesCTREncrypt(src, key, iv)
+	assert.NoError(t, err)
+	assert.Equal(t, len(src), len(encrypted))
+
+	decrypted, err := AesCTRDecrypt(encrypted, key, iv)
+	assert.NoError(t, err)
+	assert.Equal(t, src, decrypted)
+}

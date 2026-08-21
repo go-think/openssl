@@ -53,3 +53,45 @@ func TestDes3CBCDecrypt(t *testing.T) {
 	t.Log(string(dst))
 	assert.Equal(t, dst, []byte("123456"))
 }
+
+func TestDes3CFB(t *testing.T) {
+	src := []byte("123456_3DES_CFB")
+	key := []byte("123456789012345678901234")
+	iv := []byte("67890678")
+
+	encrypted, err := Des3CFBEncrypt(src, key, iv)
+	assert.NoError(t, err)
+	assert.Equal(t, len(src), len(encrypted))
+
+	decrypted, err := Des3CFBDecrypt(encrypted, key, iv)
+	assert.NoError(t, err)
+	assert.Equal(t, src, decrypted)
+}
+
+func TestDes3OFB(t *testing.T) {
+	src := []byte("123456_3DES_OFB")
+	key := []byte("123456789012345678901234")
+	iv := []byte("67890678")
+
+	encrypted, err := Des3OFBEncrypt(src, key, iv)
+	assert.NoError(t, err)
+	assert.Equal(t, len(src), len(encrypted))
+
+	decrypted, err := Des3OFBDecrypt(encrypted, key, iv)
+	assert.NoError(t, err)
+	assert.Equal(t, src, decrypted)
+}
+
+func TestDes3CTR(t *testing.T) {
+	src := []byte("123456_3DES_CTR")
+	key := []byte("123456789012345678901234")
+	iv := []byte("67890678")
+
+	encrypted, err := Des3CTREncrypt(src, key, iv)
+	assert.NoError(t, err)
+	assert.Equal(t, len(src), len(encrypted))
+
+	decrypted, err := Des3CTRDecrypt(encrypted, key, iv)
+	assert.NoError(t, err)
+	assert.Equal(t, src, decrypted)
+}

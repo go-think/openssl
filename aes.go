@@ -65,6 +65,66 @@ func AesGCMDecrypt(src, key, nonce, additionalData []byte) ([]byte, error) {
 	return GCMDecrypt(block, src, nonce, additionalData)
 }
 
+// AesCFBEncrypt encrypts data using the CFB mode of the AES algorithm.
+func AesCFBEncrypt(src, key, iv []byte) ([]byte, error) {
+	block, err := AesNewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return CFBEncrypt(block, src, iv)
+}
+
+// AesCFBDecrypt decrypts data using the CFB mode of the AES algorithm.
+func AesCFBDecrypt(src, key, iv []byte) ([]byte, error) {
+	block, err := AesNewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return CFBDecrypt(block, src, iv)
+}
+
+// AesOFBEncrypt encrypts data using the OFB mode of the AES algorithm.
+func AesOFBEncrypt(src, key, iv []byte) ([]byte, error) {
+	block, err := AesNewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return OFBEncrypt(block, src, iv)
+}
+
+// AesOFBDecrypt decrypts data using the OFB mode of the AES algorithm.
+func AesOFBDecrypt(src, key, iv []byte) ([]byte, error) {
+	block, err := AesNewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return OFBDecrypt(block, src, iv)
+}
+
+// AesCTREncrypt encrypts data using the CTR mode of the AES algorithm.
+func AesCTREncrypt(src, key, iv []byte) ([]byte, error) {
+	block, err := AesNewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return CTREncrypt(block, src, iv)
+}
+
+// AesCTRDecrypt decrypts data using the CTR mode of the AES algorithm.
+func AesCTRDecrypt(src, key, iv []byte) ([]byte, error) {
+	block, err := AesNewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return CTRDecrypt(block, src, iv)
+}
+
 
 // AesNewCipher creates and returns a new AES cipher block. Automatically pads the key length.
 func AesNewCipher(key []byte) (cipher.Block, error) {
