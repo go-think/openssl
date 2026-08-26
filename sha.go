@@ -132,3 +132,10 @@ func HmacSha512(key string, data string) []byte {
 func HmacSha512ToString(key string, data string) string {
 	return hex.EncodeToString(HmacSha512(key, data))
 }
+
+// SHA1 Computes the SHA-1 hash of the input data.
+func SHA1(data []byte) []byte {
+	h := sha1.New()
+	_, _ = h.Write(data)
+	return h.Sum(nil)
+}

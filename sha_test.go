@@ -1,6 +1,7 @@
 package openssl
 
 import (
+	"crypto/sha1"
 	"encoding/hex"
 	"testing"
 
@@ -92,4 +93,13 @@ func TestHmacSha512(t *testing.T) {
 func TestHmacSha512ToString(t *testing.T) {
 	dst := HmacSha512ToString("secret", "apple")
 	assert.Equal(t, "33c2f1dbd0b93a8a8354ddb888df1ff97b986959d4d710280f66730a913dc9d4535c43a3d51b3c7ff3708355d3d75ab67a105221b8ca803ed4e604f13514b145", dst)
+}
+
+func TestSHA1(t *testing.T) {
+	testData := []byte("test")
+	h := sha1.New()
+	_, _ = h.Write(testData)
+	expected := h.Sum(nil)
+	result := SHA1(testData)
+	assert.Equal(t, expected, result, "SHA1 function output should match expected hash")
 }

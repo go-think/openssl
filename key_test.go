@@ -1,8 +1,9 @@
 package openssl
 
 import (
-	"crypto/sha1"
+	"bytes"
 	"testing"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -11,15 +12,6 @@ const (
 	TestBlockSize20 = 20
 	TestBlockSize30 = 30
 )
-
-func TestSHA1(t *testing.T) {
-	testData := []byte("test")
-	h := sha1.New()
-	_, _ = h.Write(testData)
-	expected := h.Sum(nil)
-	result := SHA1(testData)
-	assert.Equal(t, expected, result, "SHA1 function output should match expected hash")
-}
 
 func TestKeyGenerator(t *testing.T) {
 	testData := []byte("test")
@@ -38,5 +30,29 @@ func TestKeyGenerator(t *testing.T) {
 	for _, tc := range testCases {
 		result := KeyGenerator(tc.data, tc.blockSize)
 		assert.Equal(t, tc.expected, result, "KeyGenerator output should match expected key")
+	}
+}
+
+func TestRandomBytes(t *testing.T) {
+	testLengths := []int{12, 16, 24, 32, 64}
+	for _, length := range testLengths {
+		b1, err := RandomBytes(length)
+		assert.NoError(t, err)
+		assert.Equal(t, length, len(b1))
+
+		b2, err := RandomBytes(length)
+		assert.NoError(t, err)
+		assert.Equal(t, length, len(b2))
+
+		// 确保多次生成的内容具有随机性（不相同）
+		assert.False(t, bytes.Equal(b1, b2), "consecutive random bytes of length %d should not be equal", length)
+	}
+
+	// 边界与异常测试
+	invalidLengths := []int{0, -1, -10}
+	for _, length := range invalidLengths {
+		b, err := RandomBytes(length)
+		assert.Error(t, err)
+		assert.Nil(t, b)
 	}
 }

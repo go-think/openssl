@@ -1,7 +1,8 @@
 package openssl
 
 import (
-	"crypto/sha1"
+	"crypto/rand"
+	"errors"
 )
 
 // Generates a key based on the input data and specified block size.
@@ -15,9 +16,15 @@ func KeyGenerator(src []byte, blockSize int) []byte {
 	return hashs[0:blockSize]
 }
 
-// Computes the SHA-1 hash of the input data.
-func SHA1(data []byte) []byte {
-	h := sha1.New()
-	_, _ = h.Write(data)
-	return h.Sum(nil)
+// RandomBytes generates cryptographically secure random bytes of specified length.
+func RandomBytes(length int) ([]byte, error) {
+	if length <= 0 {
+		return nil, errors.New("openssl: invalid length")
+	}
+
+	b := make([]byte, length)
+	if _, err := rand.Read(b); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
