@@ -6,7 +6,7 @@
 [![Godoc](https://godoc.org/github.com/go-think/openssl?status.svg)](https://pkg.go.dev/github.com/go-think/openssl)
 [![Release](https://img.shields.io/github/release/go-think/openssl.svg)](https://github.com/go-think/openssl/releases/latest)
 
-A functions wrapping of OpenSSL library for symmetric and asymmetric encryption and decryption, digital signatures, hashing, and HMAC. It provides clean, boilerplate-free cryptographic APIs with 100% compatibility across OpenSSL, PHP, Java, and Node.js.
+A functions wrapping of OpenSSL library for symmetric and asymmetric encryption and decryption, digital signatures, hashing, and HMAC. It provides clean, boilerplate-free cryptographic APIs with 100% compatibility across OpenSSL, PHP, Java, Python, and Node.js.
 
 ---
 
@@ -24,6 +24,7 @@ A functions wrapping of OpenSSL library for symmetric and asymmetric encryption 
   - Supports standard Public Key PEM and X.509 **Certificate** formats.
   - Digital signature and verification (`RSASign` / `RSAVerify`) with configurable hash algorithms.
 - **Hashes & HMAC**: MD5, SHA-1, SHA-224, SHA-256, SHA-384, SHA-512, HMAC-SHA1, HMAC-SHA224, HMAC-SHA256, HMAC-SHA384, HMAC-SHA512.
+- **CSPRNG Utilities**: Cryptographically secure random bytes generation (`RandomBytes`) for keys, IVs, nonces, and salts.
 - **Smart Key & IV Handling**: Automatic padding / truncating for keys and IVs to eliminate boilerplate code.
 - **100% Interoperability**: Seamlessly compatible with OpenSSL, PHP (`openssl_encrypt`), Java, Python, and Node.js.
 
@@ -37,6 +38,7 @@ A functions wrapping of OpenSSL library for symmetric and asymmetric encryption 
   - [DES](#des)
   - [3DES](#3des)
   - [Padding Schemes](#padding-schemes)
+  - [Key & IV Utilities](#key--iv-utilities)
 - [Asymmetric Encryption (RSA)](#rsa)
   - [Key Generation](#1-key-generation)
   - [Encryption & Decryption](#2-encryption--decryption-auto-chunking)
@@ -67,6 +69,7 @@ go get -u github.com/go-think/openssl
 The length of the key can be 16, 24, or 32 characters (128, 192, or 256 bits). Keys shorter or longer than the required size are automatically padded or truncated.
 
 #### AES-ECB
+
 ```go
 src := []byte("123456")
 key := []byte("1234567890123456")
@@ -81,10 +84,11 @@ fmt.Println(string(plain)) // 123456
 ```
 
 #### AES-CBC
+
 ```go
 src := []byte("123456")
 key := []byte("1234567890123456")
-iv  := []byte("1234567890123456")
+iv  := []byte("1234567890123456") // Or generate securely via openssl.RandomBytes(16)
 
 // Encrypt
 dst, err := openssl.AesCBCEncrypt(src, key, iv, openssl.PKCS7_PADDING)
@@ -96,23 +100,51 @@ fmt.Println(string(plain)) // 123456
 ```
 
 #### AES-GCM (Galois/Counter Mode)
-GCM is an AEAD mode that provides confidentiality and authentication integrity without requiring padding.
+
+GCM is an authenticated encryption (AEAD) mode that provides both confidentiality and data authenticity without requiring padding:
+- **Nonce (IV)**: Standard recommended size is **12 bytes** (often called `iv` in other languages).
+- **Additional Data (AAD)**: Optional data that is authenticated but not encrypted (can be `nil`).
+- **Authentication Tag**: In Go standard library, the 16-byte authentication tag is automatically appended to the ciphertext ($\text{Output} = \text{Ciphertext} \parallel \text{Tag}$).
+- **Security Notice (Critical)**: **Never reuse the same `nonce` with the same key in GCM mode.** Reusing a nonce breaks authentication integrity. In production, always generate a fresh cryptographically secure random nonce via `openssl.RandomBytes(12)`.
+
 ```go
 src := []byte("123456")
 key := []byte("1234567890123456")
-nonce := []byte("123456789012")          // Standard 12-byte nonce
+
+// In production, ALWAYS generate a fresh unique nonce (IV):
+// nonce, err := openssl.RandomBytes(12)
+nonce := []byte("123456789012")          // Static 12-byte nonce (demonstration only)
 additionalData := []byte("header_info") // Optional AAD
 
-// Encrypt
+// Encrypt (output contains ciphertext + 16-byte auth tag)
 dst, err := openssl.AesGCMEncrypt(src, key, nonce, additionalData)
 fmt.Println(base64.StdEncoding.EncodeToString(dst))
 
-// Decrypt
+// Decrypt (automatically verifies the 16-byte tag at the end)
 plain, err := openssl.AesGCMDecrypt(dst, key, nonce, additionalData)
 fmt.Println(string(plain)) // 123456
 ```
 
+##### Production Pattern (Self-Contained Payload: Nonce + Ciphertext + Tag)
+
+Because the 12-byte `nonce` does not need to be secret, the standard industry practice is to prepend it to the ciphertext for convenient storage and transmission:
+
+```go
+// 1. Generate random nonce & encrypt
+nonce, _ := openssl.RandomBytes(12)
+ciphertextWithTag, err := openssl.AesGCMEncrypt(src, key, nonce, additionalData)
+
+// 2. Pack: Nonce (12B) || Ciphertext || Tag (16B)
+payload := append(nonce, ciphertextWithTag...)
+
+// 3. Unpack & decrypt on receiver side:
+extractedNonce := payload[:12]
+rawCiphertext  := payload[12:]
+plain, err := openssl.AesGCMDecrypt(rawCiphertext, key, extractedNonce, additionalData)
+```
+
 #### AES-CFB / AES-OFB / AES-CTR (Stream Modes)
+
 Stream cipher modes do not require padding.
 ```go
 src := []byte("123456")
@@ -203,6 +235,29 @@ The library provides built-in constants for standard block padding schemes:
 | `openssl.PKCS7_PADDING` | Standard PKCS#7 padding (compatible with OpenSSL default) |
 | `openssl.PKCS5_PADDING` | PKCS#5 padding (equivalent to PKCS#7 in implementation) |
 | `openssl.ZEROS_PADDING` | Zero byte padding |
+
+---
+
+### Key & IV Utilities
+
+#### Secure Random Bytes (IV / Nonce / Salt)
+Generates cryptographically secure random bytes using `crypto/rand` (equivalent to PHP's `openssl_random_pseudo_bytes()` or Node.js `crypto.randomBytes()`):
+
+```go
+// Generate 12-byte Nonce for AES-GCM
+nonce, err := openssl.RandomBytes(12)
+
+// Generate 16-byte IV for AES-CBC / CTR / CFB / OFB
+iv, err := openssl.RandomBytes(16)
+
+// Generate 32-byte Key for AES-256
+key, err := openssl.RandomBytes(32)
+
+// Generate random Hex token / secret string
+tokenBytes, _ := openssl.RandomBytes(32)
+hexToken := hex.EncodeToString(tokenBytes) // 64-character hex string
+```
+
 
 ---
 
@@ -300,7 +355,54 @@ hmac512Str := openssl.HmacSha512ToString(key, data)
 
 This library is engineered to produce identical binary ciphertext to standard OpenSSL and other languages.
 
+### AES-GCM Concept & Parameter Mapping
+
+| Concept / Field | Go (`openssl`) | Node.js (`crypto`) | Python (`cryptography`) | Java (`javax.crypto`) | PHP (`openssl_encrypt`) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Initialization Vector** | `nonce` (12 bytes) | `iv` | `nonce` / `iv` | `GCMParameterSpec(128, iv)` | `$iv` |
+| **Authenticated Data** | `additionalData` | `cipher.setAAD(aad)` | `associated_data` | `cipher.updateAAD(aad)` | `$aad` |
+| **Authentication Tag** | Appended to ciphertext (`ciphertext \|\| tag`) | `cipher.getAuthTag()` (separated) | `AESGCM` appends / separated in primitives | Appended to ciphertext | Passed as reference (`&$tag`) |
+
+---
+
+### Node.js Example (`crypto`)
+
+#### AES-GCM Interoperability
+```javascript
+const crypto = require('crypto');
+
+const key = Buffer.from('1234567890123456'); // 16-byte key
+const nonce = Buffer.from('123456789012');    // 12-byte nonce (IV)
+const aad = Buffer.from('header_info');
+const plaintext = '123456';
+
+// 1. Encrypt with Node.js
+const cipher = crypto.createCipheriv('aes-128-gcm', key, nonce);
+cipher.setAAD(aad);
+let encrypted = cipher.update(plaintext, 'utf8');
+encrypted = Buffer.concat([encrypted, cipher.final()]);
+const tag = cipher.getAuthTag(); // 16-byte Tag
+
+// Pack into Go format (ciphertext || tag)
+const goCompatiblePayload = Buffer.concat([encrypted, tag]);
+
+// 2. Decrypt data from Go (Go outputs ciphertext || tag)
+const ciphertextPart = goCompatiblePayload.subarray(0, goCompatiblePayload.length - 16);
+const tagPart = goCompatiblePayload.subarray(goCompatiblePayload.length - 16);
+
+const decipher = crypto.createDecipheriv('aes-128-gcm', key, nonce);
+decipher.setAAD(aad);
+decipher.setAuthTag(tagPart);
+let decrypted = decipher.update(ciphertextPart, null, 'utf8');
+decrypted += decipher.final('utf8');
+console.log(decrypted); // 123456
+```
+
+---
+
 ### Java Example (`javax.crypto`)
+
+#### AES-128-CBC
 ```java
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
@@ -333,7 +435,34 @@ public class AesDemo {
 }
 ```
 
+#### AES-128-GCM
+```java
+import javax.crypto.Cipher;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+
+// AES-128-GCM in Java automatically appends/expects the 16-byte tag at the end (identical to Go)
+Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+SecretKeySpec keySpec = new SecretKeySpec("1234567890123456".getBytes(StandardCharsets.UTF_8), "AES");
+GCMParameterSpec gcmSpec = new GCMParameterSpec(128, "123456789012".getBytes(StandardCharsets.UTF_8));
+
+// Encrypt
+cipher.init(Cipher.ENCRYPT_MODE, keySpec, gcmSpec);
+cipher.updateAAD("header_info".getBytes(StandardCharsets.UTF_8));
+byte[] ciphertextWithTag = cipher.doFinal("123456".getBytes(StandardCharsets.UTF_8));
+
+// Decrypt
+cipher.init(Cipher.DECRYPT_MODE, keySpec, gcmSpec);
+cipher.updateAAD("header_info".getBytes(StandardCharsets.UTF_8));
+byte[] decrypted = cipher.doFinal(ciphertextWithTag);
+```
+
+---
+
 ### PHP Example (`openssl_encrypt`)
+
+#### AES-128-CBC
 ```php
 <?php
 $data = "123456";
@@ -343,6 +472,50 @@ $iv   = "1234567890123456";
 // AES-128-CBC
 $encrypted = openssl_encrypt($data, 'aes-128-cbc', $key, OPENSSL_RAW_DATA, $iv);
 echo base64_encode($encrypted); // 1jdzWuniG6UMtoa3T6uNLA== (Identical to Go output)
+```
+
+#### AES-128-GCM
+```php
+<?php
+$data  = "123456";
+$key   = "1234567890123456";
+$nonce = "123456789012"; // 12-byte IV
+$aad   = "header_info";
+
+// 1. Encrypt with PHP
+$ciphertext = openssl_encrypt($data, 'aes-128-gcm', $key, OPENSSL_RAW_DATA, $nonce, $tag, $aad);
+$goCompatiblePayload = $ciphertext . $tag; // Append tag to match Go format
+
+// 2. Decrypt data from Go (extract 16-byte tag from end)
+$raw = $goCompatiblePayload;
+$cipherPart = substr($raw, 0, -16);
+$tagPart    = substr($raw, -16);
+
+$decrypted = openssl_decrypt($cipherPart, 'aes-128-gcm', $key, OPENSSL_RAW_DATA, $nonce, $tagPart, $aad);
+echo $decrypted; // 123456
+```
+
+---
+
+### Python Example (`cryptography`)
+
+#### AES-128-GCM
+```python
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+key = b"1234567890123456" # 16-byte key
+nonce = b"123456789012"     # 12-byte nonce (IV)
+aad = b"header_info"
+data = b"123456"
+
+aesgcm = AESGCM(key)
+
+# 1. Encrypt with Python (Output format is ciphertext || 16-byte tag, 100% identical to Go)
+ciphertext_with_tag = aesgcm.encrypt(nonce, data, aad)
+
+# 2. Decrypt data from Go (Go output can be directly decrypted by Python)
+decrypted = aesgcm.decrypt(nonce, ciphertext_with_tag, aad)
+print(decrypted.decode()) # 123456
 ```
 
 ---

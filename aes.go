@@ -45,7 +45,14 @@ func AesCBCDecrypt(src, key, iv []byte, padding string) ([]byte, error) {
 	return CBCDecrypt(block, src, iv, padding)
 }
 
-// AesGCMEncrypt encrypts data using the GCM mode of the AES algorithm.
+// AesGCMEncrypt encrypts data using AES in GCM (Galois/Counter Mode).
+//
+// Parameters:
+//   - nonce: 12-byte initialization vector (referred to as 'iv' in other languages).
+//   - additionalData: optional authenticated additional data (AAD).
+//
+// Returns:
+//   - ciphertext with a 16-byte authentication tag appended at the end (ciphertext || tag).
 func AesGCMEncrypt(src, key, nonce, additionalData []byte) ([]byte, error) {
 	block, err := AesNewCipher(key)
 	if err != nil {
@@ -55,7 +62,15 @@ func AesGCMEncrypt(src, key, nonce, additionalData []byte) ([]byte, error) {
 	return GCMEncrypt(block, src, nonce, additionalData)
 }
 
-// AesGCMDecrypt decrypts data using the GCM mode of the AES algorithm.
+// AesGCMDecrypt decrypts data using AES in GCM (Galois/Counter Mode).
+//
+// Parameters:
+//   - src: ciphertext containing the 16-byte authentication tag at the end (ciphertext || tag).
+//   - nonce: 12-byte initialization vector (referred to as 'iv' in other languages).
+//   - additionalData: authenticated additional data (AAD) that must match encryption.
+//
+// Returns:
+//   - decrypted plaintext after authentication verification.
 func AesGCMDecrypt(src, key, nonce, additionalData []byte) ([]byte, error) {
 	block, err := AesNewCipher(key)
 	if err != nil {
@@ -64,6 +79,7 @@ func AesGCMDecrypt(src, key, nonce, additionalData []byte) ([]byte, error) {
 
 	return GCMDecrypt(block, src, nonce, additionalData)
 }
+
 
 // AesCFBEncrypt encrypts data using the CFB mode of the AES algorithm.
 func AesCFBEncrypt(src, key, iv []byte) ([]byte, error) {

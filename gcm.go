@@ -6,6 +6,13 @@ import (
 )
 
 // GCMEncrypt encrypts data using GCM (Galois/Counter Mode).
+//
+// Parameters:
+//   - nonce: 12-byte initialization vector (often referred to as 'iv' in other languages/libraries).
+//   - additionalData: optional authenticated additional data (AAD), can be nil.
+//
+// Returns:
+//   - ciphertext with a 16-byte authentication tag appended at the end (format: ciphertext || tag).
 func GCMEncrypt(block cipher.Block, src, nonce, additionalData []byte) ([]byte, error) {
 	aesgcm, err := cipher.NewGCM(block)
 	if err != nil {
@@ -20,6 +27,14 @@ func GCMEncrypt(block cipher.Block, src, nonce, additionalData []byte) ([]byte, 
 }
 
 // GCMDecrypt decrypts data using GCM (Galois/Counter Mode).
+//
+// Parameters:
+//   - src: input ciphertext containing the 16-byte authentication tag at the end (format: ciphertext || tag).
+//   - nonce: 12-byte initialization vector (referred to as 'iv' in other languages).
+//   - additionalData: authenticated additional data (AAD) that must match the data used during encryption.
+//
+// Returns:
+//   - decrypted plaintext after authentication tag verification.
 func GCMDecrypt(block cipher.Block, src, nonce, additionalData []byte) ([]byte, error) {
 	aesgcm, err := cipher.NewGCM(block)
 	if err != nil {
@@ -36,4 +51,5 @@ func GCMDecrypt(block cipher.Block, src, nonce, additionalData []byte) ([]byte, 
 
 	return aesgcm.Open(nil, nonce, src, additionalData)
 }
+
 
