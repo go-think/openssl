@@ -1,10 +1,11 @@
 # Openssl encryption
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/go-think/openssl)](https://goreportcard.com/report/github.com/go-think/openssl)
 [![build](https://github.com/go-think/openssl/actions/workflows/build.yml/badge.svg)](https://github.com/go-think/openssl/actions/workflows/build.yml)
 [![Coverage Status](https://coveralls.io/repos/github/go-think/openssl/badge.svg?branch=master)](https://coveralls.io/github/go-think/openssl?branch=master)
-[![Godoc](https://godoc.org/github.com/go-think/openssl?status.svg)](https://pkg.go.dev/github.com/go-think/openssl)
+[![Go Reference](https://pkg.go.dev/badge/github.com/go-think/openssl.svg)](https://pkg.go.dev/github.com/go-think/openssl)
 [![Release](https://img.shields.io/github/release/go-think/openssl.svg)](https://github.com/go-think/openssl/releases/latest)
+[![Zero Runtime Dependencies](https://img.shields.io/badge/runtime%20dependencies-zero-brightgreen.svg)](https://github.com/go-think/openssl/blob/master/go.mod)
+[![License](https://img.shields.io/github/license/go-think/openssl)](https://github.com/go-think/openssl/blob/master/LICENSE)
 
 A functions wrapping of OpenSSL library for symmetric and asymmetric encryption and decryption, digital signatures, hashing, and HMAC. It provides clean, boilerplate-free cryptographic APIs with 100% compatibility across OpenSSL, PHP, Java, Python, and Node.js.
 
