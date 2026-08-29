@@ -24,6 +24,7 @@ A functions wrapping of OpenSSL library for symmetric and asymmetric encryption 
   - Supports standard Public Key PEM and X.509 **Certificate** formats.
   - Digital signature and verification (`RSASign` / `RSAVerify`) with configurable hash algorithms.
 - **Hashes & HMAC**: MD5, SHA-1, SHA-224, SHA-256, SHA-384, SHA-512, HMAC-SHA1, HMAC-SHA224, HMAC-SHA256, HMAC-SHA384, HMAC-SHA512.
+- **Key Derivation (KDF)**: PBKDF2 (RFC 2898/8018) and HKDF (RFC 5869) for deriving keys from passwords or shared secrets, with output byte-identical to PHP `openssl_pbkdf2` / `hash_hkdf`, Node.js, Python, and OpenSSL.
 - **CSPRNG Utilities**: Cryptographically secure random bytes generation (`RandomBytes`) for keys, IVs, nonces, and salts.
 - **Smart Key & IV Handling**: Automatic padding / truncating for keys and IVs to eliminate boilerplate code.
 - **100% Interoperability**: Seamlessly compatible with OpenSSL, PHP (`openssl_encrypt`), Java, Python, and Node.js.
@@ -46,6 +47,9 @@ A functions wrapping of OpenSSL library for symmetric and asymmetric encryption 
 - [Hash & HMAC](#hash--hmac)
   - [MD5](#md5)
   - [SHA & HMAC-SHA](#sha--hmac-sha)
+- [Key Derivation (KDF)](#key-derivation-kdf)
+  - [PBKDF2](#pbkdf2)
+  - [HKDF](#hkdf)
 - [Cross-Language Interoperability](#cross-language-interoperability)
 - [License](#license)
 - [Contact](#contact)
@@ -348,6 +352,95 @@ hmac256Str := openssl.HmacSha256ToString(key, data)
 hmac384Str := openssl.HmacSha384ToString(key, data)
 hmac512Str := openssl.HmacSha512ToString(key, data)
 ```
+
+---
+
+## Key Derivation (KDF)
+
+### PBKDF2
+
+Derives a key of arbitrary length from a password and salt per [RFC 2898 / RFC 8018](https://datatracker.ietf.org/doc/html/rfc8018). The output is raw binary (`[]byte`) and is byte-identical to PHP `openssl_pbkdf2()` / `hash_pbkdf2()`, Node.js `crypto.pbkdf2Sync()`, Python `hashlib.pbkdf2_hmac()`, and the `openssl kdf` CLI for the same inputs.
+
+```go
+import (
+    "crypto/sha256"
+
+    openssl "github.com/go-think/openssl"
+)
+
+password := []byte("password")
+salt, _ := openssl.RandomBytes(16) // ALWAYS use a random salt per password
+
+// Example-only: 10,000 iterations keeps this sample fast; production
+// PBKDF2-HMAC-SHA256 should use hundreds of thousands of iterations.
+key, err := openssl.PBKDF2(sha256.New, password, salt, 10000, 32)
+if err != nil {
+    panic(err)
+}
+```
+
+> **Note the parameter order**: Go uses `(h, password, salt, iter, keyLen)`, while PHP uses `openssl_pbkdf2($password, $salt, $key_length, $iterations, $digest)`.
+
+Identical PHP:
+
+```php
+$salt = /* the same 16-byte salt as Go */;
+$key  = openssl_pbkdf2('password', $salt, 32, 10000, 'sha256'); // same binary output
+```
+
+Identical Node.js:
+
+```javascript
+const key = crypto.pbkdf2Sync('password', salt, 10000, 32, 'sha256'); // same binary output
+```
+
+**Security guidance**: use a high iteration count (follow current OWASP recommendations — hundreds of thousands of iterations for PBKDF2-HMAC-SHA256), a unique random salt per password via `openssl.RandomBytes(16)`, and prefer SHA-256/SHA-512 over SHA-1.
+
+### HKDF
+
+Derives keys from high-entropy input keying material per [RFC 5869](https://datatracker.ietf.org/doc/html/rfc5869) — the standard way to expand a shared secret (e.g., from ECDH) into per-purpose keys. The output is byte-identical to PHP `hash_hkdf()` for the same inputs.
+
+```go
+import (
+    "crypto/sha256"
+    "io"
+
+    openssl "github.com/go-think/openssl"
+)
+
+secret := []byte("input keying material") // e.g. an ECDH shared secret
+salt, _ := openssl.RandomBytes(32)        // optional but recommended
+info   := []byte("app-session-encryption")
+
+// One-shot (equivalent to PHP hash_hkdf('sha256', $ikm, 32, $info, $salt))
+key, err := openssl.HKDF(sha256.New, secret, salt, info, 32)
+if err != nil {
+    panic(err)
+}
+
+// Or in two explicit steps for finer control:
+prk, err := openssl.HKDFExtract(sha256.New, secret, salt) // salt may be nil
+if err != nil {
+    panic(err)
+}
+key, err = openssl.HKDFExpand(sha256.New, prk, info, 32) // max 255 * hash size
+if err != nil {
+    panic(err)
+}
+
+// Or stream key material on demand via io.Reader:
+reader, err := openssl.HKDFReader(sha256.New, secret, salt, info)
+if err != nil {
+    panic(err)
+}
+chunk := make([]byte, 16)
+_, err = io.ReadFull(reader, chunk)
+if err != nil {
+    panic(err)
+}
+```
+
+> **PBKDF2 vs HKDF**: use PBKDF2 for low-entropy passwords (slow by design); use HKDF only for high-entropy secrets (fast by design).
 
 ---
 
