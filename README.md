@@ -20,10 +20,11 @@ A functions wrapping of OpenSSL library for symmetric and asymmetric encryption 
   - **AEAD Authentication**: GCM (Galois/Counter Mode)
 - **Flexible Padding Schemes**: PKCS#7 (PKCS#5), ZeroPadding (Zeros), with automatic padding and unpadding.
 - **Asymmetric Cryptography (RSA)**:
-  - Key pair generation (PKCS#1 PEM) and public key extraction.
-  - Encryption & decryption with **automatic chunking** for arbitrary large data.
-  - Supports standard Public Key PEM and X.509 **Certificate** formats.
-  - Digital signature and verification (`RSASign` / `RSAVerify`) with configurable hash algorithms.
+  - Key pair generation (PKCS#1 / PKCS#8 PEM) and public key extraction.
+  - Encryption & decryption with **automatic chunking** for arbitrary large data, in PKCS#1 v1.5 and **OAEP** padding.
+  - Supports standard Public Key PEM (PKIX & PKCS#1) and X.509 **Certificate** formats.
+  - Digital signature and verification with configurable hash algorithms: PKCS#1 v1.5 (`RSASign` / `RSAVerify`) and **PSS** (`RSASignPSS` / `RSAVerifyPSS`).
+  - Transparently accepts modern **PKCS#8** (`PRIVATE KEY`) private keys, matching PHP `openssl_pkey_get_private()`.
 - **Hashes & HMAC**: MD5, SHA-1, SHA-224, SHA-256, SHA-384, SHA-512, HMAC-SHA1, HMAC-SHA224, HMAC-SHA256, HMAC-SHA384, HMAC-SHA512.
 - **Key Derivation (KDF)**: PBKDF2 (RFC 2898/8018) and HKDF (RFC 5869) for deriving keys from passwords or shared secrets, with output byte-identical to PHP `openssl_pbkdf2` / `hash_hkdf`, Node.js, Python, and OpenSSL.
 - **CSPRNG Utilities**: Cryptographically secure random bytes generation (`RandomBytes`) for keys, IVs, nonces, and salts.
@@ -45,6 +46,7 @@ A functions wrapping of OpenSSL library for symmetric and asymmetric encryption 
   - [Key Generation](#1-key-generation)
   - [Encryption & Decryption](#2-encryption--decryption-auto-chunking)
   - [Sign & Verify](#3-sign--verify)
+  - [OAEP & PSS](#4-oaep--pss)
 - [Hash & HMAC](#hash--hmac)
   - [MD5](#md5)
   - [SHA & HMAC-SHA](#sha--hmac-sha)
@@ -268,28 +270,41 @@ hexToken := hex.EncodeToString(tokenBytes) // 64-character hex string
 
 ## RSA
 
-Supports standard PKCS#1 PEM private keys, public keys, and X.509 `CERTIFICATE` blocks.
+Supports PKCS#1 and PKCS#8 (`PRIVATE KEY`) PEM private keys, PKIX / PKCS#1 public keys, and X.509 `CERTIFICATE` blocks.
 
 ### 1. Key Generation
+
+Generate a PKCS#1 private key (`RSA PRIVATE KEY` PEM):
+
 ```go
 var privateKeyBuf, publicKeyBuf bytes.Buffer
 
-// Generate 2048-bit Private Key
 err := openssl.RSAGenerateKey(2048, &privateKeyBuf)
 
 // Extract Public Key from Private Key
 err = openssl.RSAGeneratePublicKey(privateKeyBuf.Bytes(), &publicKeyBuf)
 ```
 
+Or generate a modern PKCS#8 private key instead (`PRIVATE KEY` PEM, the OpenSSL/PHP default) — choose one of the two formats:
+
+```go
+var privateKeyBuf, publicKeyBuf bytes.Buffer
+
+err := openssl.RSAGenerateKeyPKCS8(2048, &privateKeyBuf)
+
+// Extract Public Key from Private Key (accepts both PKCS#1 and PKCS#8 input)
+err = openssl.RSAGeneratePublicKey(privateKeyBuf.Bytes(), &publicKeyBuf)
+```
+
 ### 2. Encryption & Decryption (Auto-Chunking)
-`RSAEncrypt` and `RSADecrypt` handle arbitrary length plaintexts automatically by chunking according to key size.
+`RSAEncrypt` and `RSADecrypt` handle arbitrary length plaintexts automatically by chunking according to key size. Private keys in PKCS#1 or PKCS#8 format are accepted transparently.
 ```go
 src := []byte("Arbitrary length data to encrypt using RSA...")
 
 // Encrypt with Public Key (or X.509 Certificate)
 encrypted, err := openssl.RSAEncrypt(src, publicKeyPem)
 
-// Decrypt with Private Key
+// Decrypt with Private Key (PKCS#1 or PKCS#8)
 decrypted, err := openssl.RSADecrypt(encrypted, privateKeyPem)
 fmt.Println(string(decrypted))
 ```
@@ -301,11 +316,55 @@ src := []byte("Data to be signed")
 // Sign using SHA-256
 signature, err := openssl.RSASign(src, privateKeyPem, crypto.SHA256)
 
-// Verify signature
+// Verify signature (public key PEM or X.509 certificate)
 err = openssl.RSAVerify(src, signature, publicKeyPem, crypto.SHA256)
 if err == nil {
     fmt.Println("Signature verified successfully!")
 }
+```
+
+### 4. OAEP & PSS
+
+#### RSA-OAEP Encryption
+
+RSA-OAEP (RFC 8017) is the recommended RSA encryption padding, replacing PKCS#1 v1.5. Output is compatible with PHP `openssl_public_encrypt(..., OPENSSL_PKCS1_OAEP_PADDING)`:
+
+```go
+src := []byte("123456")
+
+// PHP-compatible OAEP: PHP's OAEP implementation always uses SHA-1 / MGF1-SHA1,
+// so crypto.SHA1 is required for interop with PHP (and openssl CLI defaults).
+encrypted, err := openssl.RSAEncryptOAEP(src, publicKeyPem, crypto.SHA1)
+decrypted, err := openssl.RSADecryptOAEP(encrypted, privateKeyPem, crypto.SHA1)
+
+// SHA-256 variant: interoperates with Java / Node.js / Go, but NOT with PHP
+// (PHP does not support customizing the OAEP hash).
+encrypted, err = openssl.RSAEncryptOAEP(src, publicKeyPem, crypto.SHA256)
+```
+
+PHP side:
+```php
+// Decrypt Go ciphertext (SHA-1 / MGF1-SHA1 only)
+openssl_private_decrypt($data, $decrypted, $privateKey, OPENSSL_PKCS1_OAEP_PADDING);
+```
+
+#### RSA-PSS Signatures
+
+RSA-PSS (RFC 8017) is the recommended RSA signature scheme, replacing PKCS#1 v1.5. Requires **PHP >= 8.0** on the peer side; for PHP 7.x use `RSASign` / `RSAVerify` (PKCS#1 v1.5).
+
+```go
+signature, err := openssl.RSASignPSS(src, privateKeyPem, crypto.SHA256)
+
+// Verification accepts any PSS salt length, so signatures from PHP's
+// openssl_sign() (which uses a fixed default salt length) verify as-is.
+// Also accepts a certificate PEM.
+err = openssl.RSAVerifyPSS(src, signature, publicKeyPem, crypto.SHA256)
+```
+
+PHP side:
+```php
+// PHP >= 8.0
+openssl_verify($data, $signature, $publicKey, OPENSSL_ALGO_SHA256, OPENSSL_PKCS1_PSS_PADDING);
 ```
 
 ---

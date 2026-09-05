@@ -9,12 +9,7 @@ import (
 
 // PBKDF2 derives a key of keyLen bytes from the password and salt using
 // PBKDF2 (RFC 2898 / RFC 8018) with the given hash constructor and iteration
-// count. An empty salt is allowed (equivalent to OpenSSL's -nosalt).
-//
-// The output is byte-identical to PHP openssl_pbkdf2() / hash_pbkdf2(),
-// Node.js crypto.pbkdf2Sync() and Python hashlib.pbkdf2_hmac() for the same
-// inputs. Note the parameter order (iter, keyLen) is the reverse of PHP's
-// openssl_pbkdf2($password, $salt, $key_length, $iterations).
+// count. An empty salt is allowed.
 func PBKDF2(h func() hash.Hash, password, salt []byte, iter, keyLen int) ([]byte, error) {
 	if h == nil {
 		return nil, errors.New("openssl: nil hash constructor")
@@ -129,8 +124,7 @@ func HKDFExpand(h func() hash.Hash, prk, info []byte, keyLen int) ([]byte, error
 }
 
 // HKDF derives keyLen bytes of output keying material in a single call,
-// equivalent to HKDFExtract followed by HKDFExpand (RFC 5869). The output is
-// byte-identical to PHP hash_hkdf() for the same inputs.
+// equivalent to HKDFExtract followed by HKDFExpand (RFC 5869).
 func HKDF(h func() hash.Hash, secret, salt, info []byte, keyLen int) ([]byte, error) {
 	prk, err := HKDFExtract(h, secret, salt)
 	if err != nil {
