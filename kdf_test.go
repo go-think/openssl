@@ -41,7 +41,7 @@ func TestPBKDF2(t *testing.T) {
 		{name: "RFC6070 SHA1 c=4096", password: "password", salt: "salt", iter: 4096, keyLen: 20, h: sha1.New, want: "4b007901b765489abead49d926f721d065a429c1"},
 		{name: "RFC6070 SHA1 multi-block", password: "passwordPASSWORDpassword", salt: "saltSALTsaltSALTsaltSALTsaltSALTsalt", iter: 4096, keyLen: 25, h: sha1.New, want: "3d2eec4fe41c849b80c8d83662c0e44a8b291a964cf2f07038"},
 		{name: "RFC6070 SHA1 embedded NUL", password: "pass\x00word", salt: "sa\x00lt", iter: 4096, keyLen: 16, h: sha1.New, want: "56fa6aa75548099dcc37d7f03425e0c3"},
-		// PBKDF2-HMAC-SHA256 public vectors (c=1 is also the PHP hash_pbkdf2() doc example)
+		// PBKDF2-HMAC-SHA256 public test vectors
 		{name: "SHA256 c=1", password: "password", salt: "salt", iter: 1, keyLen: 32, h: sha256.New, want: "120fb6cffcf8b32c43e7225256c4f837a86548c92ccc35480805987cb70be17b"},
 		{name: "SHA256 c=2", password: "password", salt: "salt", iter: 2, keyLen: 32, h: sha256.New, want: "ae4d0c95af6b46d32d0adff928f06dd02a303f8ef3c251dfd6e2d85a95474c43"},
 		{name: "SHA256 c=4096", password: "password", salt: "salt", iter: 4096, keyLen: 32, h: sha256.New, want: "c5e478d59288c841aa530db6845c4c8d962893a001ce4e11a4963873aa98134a"},
