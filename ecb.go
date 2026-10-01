@@ -2,6 +2,7 @@ package openssl
 
 import (
 	"crypto/cipher"
+	"errors"
 )
 
 // Encrypts data using the ECB (Electronic Codebook) mode.
@@ -19,6 +20,10 @@ func ECBEncrypt(block cipher.Block, src []byte, padding string) ([]byte, error) 
 
 // Decrypts data using the ECB (Electronic Codebook) mode.
 func ECBDecrypt(block cipher.Block, src []byte, padding string) ([]byte, error) {
+	if len(src)%block.BlockSize() != 0 {
+		return nil, errors.New("ciphertext length is not a multiple of the block size")
+	}
+
 	dst := make([]byte, len(src))
 
 	mode := NewECBDecrypter(block)

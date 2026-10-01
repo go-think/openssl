@@ -3,6 +3,7 @@ package openssl
 import (
 	"bytes"
 	"crypto/cipher"
+	"errors"
 )
 
 // CBCEncrypt encrypts data using the CBC (Cipher Block Chaining) mode.
@@ -26,6 +27,9 @@ func CBCEncrypt(block cipher.Block, src, iv []byte, padding string) ([]byte, err
 
 // CBCDecrypt decrypts data using the CBC (Cipher Block Chaining) mode.
 func CBCDecrypt(block cipher.Block, src, iv []byte, padding string) ([]byte, error) {
+	if len(src)%block.BlockSize() != 0 {
+		return nil, errors.New("ciphertext length is not a multiple of the block size")
+	}
 
 	dst := make([]byte, len(src))
 
