@@ -391,7 +391,7 @@ if err := openssl.Ed25519Verify(message, signature, publicKeyPEM.Bytes()); err !
 }
 ```
 
-PHP OpenSSL supports Ed25519 keys when its OpenSSL build provides them. For Ed25519, pass `0` as the algorithm argument to `openssl_sign()` and `openssl_verify()`; do not pass `OPENSSL_ALGO_SHA256`:
+This PHP example requires an OpenSSL extension that supports Ed25519 signing and verification with algorithm `0` and provides `OPENSSL_KEYTYPE_ED25519`, as well as an Ed25519-capable OpenSSL build. PHP 8.3 does not support this API. On supported PHP versions, pass `0` as the algorithm argument to `openssl_sign()` and `openssl_verify()`; do not pass `OPENSSL_ALGO_SHA256`:
 
 ```php
 $privateKey = openssl_pkey_get_private($privateKeyPem);
