@@ -47,6 +47,7 @@ A functions wrapping of OpenSSL library for symmetric and asymmetric encryption 
   - [Encryption & Decryption](#2-encryption--decryption-auto-chunking)
   - [Sign & Verify](#3-sign--verify)
   - [OAEP & PSS](#4-oaep--pss)
+- [Ed25519 Signatures](#ed25519-signatures)
 - [Hash & HMAC](#hash--hmac)
   - [MD5](#md5)
   - [SHA & HMAC-SHA](#sha--hmac-sha)
@@ -366,6 +367,48 @@ PHP side:
 // PHP >= 8.0
 openssl_verify($data, $signature, $publicKey, OPENSSL_ALGO_SHA256, OPENSSL_PKCS1_PSS_PADDING);
 ```
+
+## Ed25519 Signatures
+
+Ed25519 provides digital signatures only; it is not an encryption algorithm. The API uses PKCS#8 PEM private keys (`PRIVATE KEY`) and PKIX PEM public keys (`PUBLIC KEY`). Ed25519 signs the message directly and does not use a separately selected digest.
+
+```go
+var privateKeyPEM, publicKeyPEM bytes.Buffer
+if err := openssl.Ed25519GenerateKey(&privateKeyPEM); err != nil {
+    panic(err)
+}
+if err := openssl.Ed25519GeneratePublicKey(privateKeyPEM.Bytes(), &publicKeyPEM); err != nil {
+    panic(err)
+}
+
+message := []byte("message to sign")
+signature, err := openssl.Ed25519Sign(message, privateKeyPEM.Bytes())
+if err != nil {
+    panic(err)
+}
+if err := openssl.Ed25519Verify(message, signature, publicKeyPEM.Bytes()); err != nil {
+    panic(err)
+}
+```
+
+This PHP example requires an OpenSSL extension that supports Ed25519 signing and verification with algorithm `0` and provides `OPENSSL_KEYTYPE_ED25519`, as well as an Ed25519-capable OpenSSL build. PHP 8.3 does not support this API. On supported PHP versions, pass `0` as the algorithm argument to `openssl_sign()` and `openssl_verify()`; do not pass `OPENSSL_ALGO_SHA256`:
+
+```php
+$privateKey = openssl_pkey_get_private($privateKeyPem);
+$publicKey = openssl_pkey_get_public($publicKeyPem);
+$data = "message to sign";
+
+if (!openssl_sign($data, $signature, $privateKey, 0)) {
+    throw new RuntimeException("Ed25519 signing failed");
+}
+
+$verified = openssl_verify($data, $signature, $publicKey, 0);
+if ($verified !== 1) {
+    throw new RuntimeException("Ed25519 signature verification failed");
+}
+```
+
+`openssl_pkey_new(['private_key_type' => OPENSSL_KEYTYPE_ED25519])` can generate a PHP Ed25519 key pair. Export its private key as PKCS#8 PEM and public key as PKIX PEM for use with this package. Ed25519 support depends on the PHP/OpenSSL build.
 
 ---
 
